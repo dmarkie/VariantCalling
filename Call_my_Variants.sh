@@ -445,7 +445,7 @@ done
 
 if [ "$importArray" != "" ]; then
 	importjob=$(sbatch -J Import_${PROJECT} --array ${importArray}%6 ${mailme} ${SLSBIN}/GenomeDBimport.sl | awk '{print $4}')
-	if [ $? -ne 0 ] || [ "$genojob" == "" ]; then
+	if [ $? -ne 0 ] || [ "$importjob" == "" ]; then
 		(printf "FAILED!\n" 1>&2)
 		exit 1
 	else
