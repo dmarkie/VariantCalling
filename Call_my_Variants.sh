@@ -450,7 +450,7 @@ if [ "$importArray" != "" ]; then
 		exit 1
 	else
 		echo "Import_${PROJECT} job is ${importjob}"
-		(printf "%sx%-4d [%s] Logs @ %s\n" "$importjob" $(splitByChar "$importArray" "," | wc -w) $(condenseList "$importArray") "${PROJECT_PATH}/slurm/GenomeDB/import-${genojob}_*.out" 1>&2)
+		(printf "%sx%-4d [%s] Logs @ %s\n" "$importjob" $(splitByChar "$importArray" "," | wc -w) $(condenseList "$importArray") "${PROJECT_PATH}/slurm/GenomeDB/import-${importjob}_*.out" 1>&2)
 	fi
 fi 
 #####Joint Genotyping by contig
@@ -582,7 +582,7 @@ fi
 mkdir -p ${PROJECT_PATH}/slurm/mendelviol
 if [ ! -f "${PROJECT_PATH}/done/mendelviol/${PROJECT}_MendelianViolations.txt.done" ]; then
 	mendelvioljob=$(sbatch $(depCheck $mergejob) -J MendelViol_${PROJECT} ${mailme} ${SLSBIN}/mendelviol.sl | awk '{print $4}')
-	if [ $? -ne 0 ] || [ "$mergejob" == "" ]; then
+	if [ $? -ne 0 ] || [ "$mendelvioljob" == "" ]; then
 		(printf "FAILED!\n" 1>&2)
 		exit 1
 	else
@@ -614,7 +614,7 @@ mkdir -p ${PROJECT_PATH}/slurm/move
 #	depend=""
 #fi
 if [ ! -f "${PROJECT_PATH}/done/move/directoriesremoved.done" ]; then
-	movejob=$(sbatch $(depCheck ${mergesplitjob}:${mendelvioljob}) -J Move_${PROJECT} ${mailme} ${SLSBIN}/move.sl | awk '{print $4}')
+	movejob=$(sbatch $(depCheck ${mergesplitjob} ${mendelvioljob}) -J Move_${PROJECT} ${mailme} ${SLSBIN}/move.sl | awk '{print $4}')
 	if [ $? -ne 0 ] || [ "$movejob" == "" ]; then
 		(printf "FAILED!\n" 1>&2)
 		exit 1

@@ -138,6 +138,11 @@ if [ -d ${PROJECT_PATH}/applyrecal ]; then
 	echo $cmd
 	eval $cmd || exit 1
 fi
+if [ -d ${PROJECT_PATH}/refinement ]; then
+	cmd="srun rm -r ${PROJECT_PATH}/refinement"
+	echo $cmd
+	eval $cmd || exit 1
+fi
 if [ -d ${PROJECT_PATH}/split ]; then
 	cmd="srun rm -r ${PROJECT_PATH}/split"
 	echo $cmd
@@ -153,22 +158,31 @@ if [ -d ${PROJECT_PATH}/mergesplit ]; then
 	echo $cmd
 	eval $cmd || exit 1
 fi
+if [ ! -f ${PROJECT_PATH}/done/move/ped.txt.move.done ]; then
+	cmd="cp ${PROJECT_PATH}/ped.txt ${outputdir}"
+	echo ${cmd}
+	eval ${cmd} || exit 1
+	mkdir -p ${PROJECT_PATH}/done/move
+	touch ${PROJECT_PATH}/done/move/ped.txt.move.done
+else
+	echo "INFO: Output from copy for ped.txt already available"
+fi
 if [ ! -f ${PROJECT_PATH}/done/move/samplemap.txt.move.done ]; then
-	cmd="mv ${PROJECT_PATH}/samplemap.txt ${outputdir}"
+	cmd="cp ${PROJECT_PATH}/samplemap.txt ${outputdir}"
 	echo ${cmd}
 	eval ${cmd} || exit 1
 	mkdir -p ${PROJECT_PATH}/done/move
 	touch ${PROJECT_PATH}/done/move/samplemap.txt.move.done
 else
-	echo "INFO: Output from move for samplemap.txt already available"
+	echo "INFO: Output from copy for samplemap.txt already available"
 fi
 if [ ! -f ${PROJECT_PATH}/done/move/parameterfile.move.done ]; then
-	cmd="mv ${parameterfile} ${outputdir}"
+	cmd="cp ${parameterfile} ${outputdir}"
 	echo ${cmd}
 	eval ${cmd} || exit 1
 	touch ${PROJECT_PATH}/done/move/parameterfile.move.done
 else
-	echo "INFO: Output from move for parameterfile already available"
+	echo "INFO: Output from copy for parameterfile already available"
 fi
 touch ${PROJECT_PATH}/done/move/directoriesremoved.done
 exit 0

@@ -22,6 +22,8 @@ fi
 
 module purge
 module load GATK4
+# The amount of temporary disk storage required by GenomicsDBImport may exceed what is available in the default location: `/tmp`. 
+# The command line argument `--tmp-dir` can be used to specify an alternate temporary storage location with sufficient space.
 
 if [ -f ${PROJECT_PATH}/done/genotype/${CONTIG}_gen.vcf.gz.done ]; then
 	echo "INFO: Output ${CONTIG}_raw.vcf.gz already completed."
@@ -38,6 +40,7 @@ else
 		-G AS_StandardAnnotation \
 		-ped ${PED} \
 		-new-qual \
+		--tmp-dir ${TMPDIR} \
 		-O ${PROJECT_PATH}/genotype/${CONTIG}_gen.vcf.gz"
 	echo $cmd
 	eval $cmd || exit 1$?

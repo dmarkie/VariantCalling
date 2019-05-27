@@ -8,6 +8,7 @@
 #SBATCH --error		VariantCallCleanup-%j.out
 #SBATCH --output	VariantCallCleanup-%j.out
 
+source ${PROJECT_PATH}/parameters.sh
 echo "$(date) on $(hostname)"
 if [ -d ${PROJECT_PATH} ]; then
 	cmd="srun tar --exclude-vcs -zcf ${outputdir}/${PROJECT}.tar.gz ${PROJECT_PATH}"

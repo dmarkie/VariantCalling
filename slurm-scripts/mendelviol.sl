@@ -2,7 +2,7 @@
 # mendelviol.sl 
 # this script is intended to take a collection of non-overlapping contig vcf.gz files, all with the same individuals in them, and stitch them together into one vcf.gz
 #SBATCH --job-name	MendelViol
-#SBATCH --time		24:00:00
+#SBATCH --time		48:00:00
 #SBATCH --mem		4G
 #SBATCH --cpus-per-task	1
 #SBATCH --mail-type FAIL,END
