@@ -1,9 +1,9 @@
 # About
-- This pipeline is designed to take a collection of single-sample genomicVCF (g.vcf) files containing SNV and Indel calls, and produce a multisample VCF using a workflow that is largely consistent with GATK "best practise".
+- This pipeline is designed to take a collection of single-sample genomicVCF (g.vcf) files containing SNV and Indel calls, and produce a multisample VCF using a workflow that is largely consistent with GATK "best practise". It is designed for use on a SLURM cluster.
 
-- The major outputs are a PrimaryCall VCF (standard multiallelic SNV and Indels calls for a cohort of individuals) and a SplitMultiallelic VCF, which splits multiallelic variants over two or more lines to represent them in a fashion that resembles "biallelic" varints. This format has some advantages for simplifying filtering commands. Not that individuals with sex chromosome aneusomies that have been processed to accurately represent ploidy, will be excluded from the Split VCF file as the bcftools norm tool does not function for ploidy greater than two. These individuals will be present in the PrimaryCall VCF. 
+- The major outputs are a PrimaryCall VCF (standard multiallelic SNV and Indels calls for a cohort of individuals) and a SplitMultiallelic VCF, which splits multiallelic variants over two or more lines to represent them in a fashion that resembles "biallelic" varints. This format has some advantages for simplifying filtering commands. Note that individuals with sex chromosome aneusomies that have been processed to accurately represent ploidy, will be excluded from the Split VCF file as bcftools norm does not function for ploidy greater than two. These individuals will be present in the PrimaryCall VCF. 
 
-- The script requires information about paths to certain resources and some options, held in the file config.sh.
+- The script requires information about paths to certain resources and some other options, held in the file config.sh.
 
 - Start the pipeline by running the Call_My_Variants.sh script. Once started this script will run interactively by requesting the full path to a directory into which the final files will be placed, the directory does not need to exist already. The name should be somewhat descriptive of the project or cohort and be unique eg "20191027_Genomic_GATK". 
 
