@@ -214,9 +214,10 @@ else
 			${support} \
 			-ped ${PED} \
 			-O ${PROJECT_PATH}/refinement/${CONTIG}_post.vcf.gz"
-		mkdir -p ${PROJECT_PATH}/done/refinement
+		mkdir -p ${PROJECT_PATH}/refinement/
 		echo $cmd
 		eval $cmd || exit 1$?
+		mkdir -p ${PROJECT_PATH}/done/refinement
 		touch ${PROJECT_PATH}/done/refinement/${CONTIG}_post.vcf.gz.done
 	fi
 # GATK4 VariantAnnotator in beta and the PossibleDenovoAnnotation does not seem to be recognised

@@ -37,15 +37,6 @@ else
 fi
 module purge
 module load BCFtools
-#if [ -f ${PROJECT_PATH}/done/mergesplit/$(basename ${splitmergeout}).tbi.done ]; then
-#	echo "INFO: Output from Merge for ${splitmergeout}.tbi already available"
-#else
-#	scontrol update jobid=${SLURM_JOB_ID} jobname=IndexMerge_${PROJECT}_Split
-#	cmd="$(which bcftools) index -t ${splitmergeout}"
-#	echo $cmd
-#	eval $cmd || exit 1$?
-#	touch ${PROJECT_PATH}/done/mergesplit/$(basename ${splitmergeout}).tbi.done
-#fi
 # generate the list of IDs 
 if [ -f ${PROJECT_PATH}/done/mergesplit/${PROJECT}_ID.list.done ]; then
 	echo "INFO: Output from Merge for ${PROJECT}_Split_ID.list already available"

@@ -4,7 +4,7 @@
 #SBATCH --job-name	GenomeDB
 #SBATCH --time		10-00:00:00
 #SBATCH --cpus-per-task	2
-#SBATCH --mem		12G
+#SBATCH --mem		16G
 #SBATCH --mail-type FAIL,END
 #SBATCH --error		slurm/GenomeDB/import-%A_%a.out
 #SBATCH --output	slurm/GenomeDB/import-%A_%a.out
@@ -35,15 +35,16 @@ else
 	if [ -d ${PROJECT_PATH}/GenomeDB/${CONTIG} ]; then
 		rm -r ${PROJECT_PATH}/GenomeDB/${CONTIG}
 	fi
-	cmd="srun gatk --java-options \"-Xmx8g -Xms8g\" \
-	GenomicsDBImport \
-	-R ${REFA}
-	--genomicsdb-workspace-path ${PROJECT_PATH}/GenomeDB/${CONTIG} \
-	--batch-size 50 \
-	-L ${CONTIG} \
-	--sample-name-map ${samplemap} \
-	--tmp-dir ${TMPDIR} \
-	--reader-threads $SLURM_CPUS_PER_TASK"
+	cmd="srun -J GenomeDBimport_${CONTIG} \
+gatk --java-options \"-Xmx8g -Xms8g\" \
+GenomicsDBImport \
+-R ${REFA}
+--genomicsdb-workspace-path ${PROJECT_PATH}/GenomeDB/${CONTIG} \
+--batch-size 50 \
+-L ${CONTIG} \
+--sample-name-map ${samplemap} \
+--tmp-dir ${TMPDIR} \
+--reader-threads $SLURM_CPUS_PER_TASK"
 	echo ${cmd}
 	eval ${cmd} || exit 1$?
 	mkdir -p ${PROJECT_PATH}/done/GenomeDB
