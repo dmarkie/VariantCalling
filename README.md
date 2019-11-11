@@ -45,6 +45,7 @@ Genotype Refinement (for each contig):
 - Calculates genotype posteriors based on available pedigree information and population (currently using Gnomad genomes 2.1)
 - Identifies possible de novo mutations using pedigree information when available loConf and hiConf (currently not working and disabled)
 - Adds a low quality genotype annotation for genotypes with a GQ less than 20
+
 For this part of the workflow, the True X region and the Y chromosome are generally excluded from the first two steps as they do not work with non-diploid regions. If the X and Y chromosomes were uniformly called as diploid (for both males and females), the answer to the question about using gender for the sex chromosome ploidy will be negative and the X and Y chromosomes will now be included in these steps.
 
 # splitmultiallelic.sl
