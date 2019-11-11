@@ -64,7 +64,7 @@ if [ -f ${PROJECT_PATH}/done/split/${CONTIG}_Split.vcf.gz.done ]; then
 else
 	scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=SplitMulti_${PROJECT}_${CONTIG}
 	# have made this in to a two step process because it is possible that they need to be split first then left aligned and normalised 
-	cmd="$(which bcftools) norm -m -any | $(which bcftools) norm -f ${REFA} -Oz -o ${PROJECT_PATH}/split/${CONTIG}_Split.vcf.gz ${variant}"
+	cmd="$(which bcftools) norm -m -any ${variant} | $(which bcftools) norm -f ${REFA} -Oz -o ${PROJECT_PATH}/split/${CONTIG}_Split.vcf.gz"
 	mkdir -p ${PROJECT_PATH}/split
 	set -o pipefail
 	echo $cmd
