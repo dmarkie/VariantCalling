@@ -1,6 +1,8 @@
 # About
 - This pipeline is designed to take a collection of single-sample genomicVCF (g.vcf) files containing SNV and Indel calls, and produce a multisample VCF using a workflow that is largely consistent with GATK "best practise". It is designed for use on a SLURM cluster.
 
+- Data has to have been previously aligned (and single sample variant-called to produce a g.vcf file), preferably by the Fastq2VCF pipeline produced by Sam Hawarden, as some of the auxiliary files from this pipeline are used.
+
 - The major outputs are a PrimaryCall VCF (standard multiallelic SNV and Indels calls for a cohort of individuals) and a SplitMultiallelic VCF, which splits multiallelic variants over two or more lines to represent them in a fashion that resembles "biallelic" variants. This format has some advantages for simplifying filtering commands. Note that individuals with sex chromosome aneusomies that have been processed to accurately represent ploidy, will be excluded from the Split VCF file as bcftools norm does not function for ploidy greater than two. These individuals will be present in the PrimaryCall VCF. 
 
 - The script requires information about paths to certain resources and some other options, held in the file config.sh.
