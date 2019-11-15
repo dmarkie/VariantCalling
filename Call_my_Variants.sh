@@ -139,8 +139,12 @@ export parameterfile="${PROJECT_PATH}/parameters.sh"
 export outputdir=${outputdir}
 
 # if this is a restart, get the previously captured details here
-if [ -f ${parameterfile} ]; then
+if grep -q "outputdir=\"${outputdir}\"" ${parameterfile} > /dev/null 2>&1; then
+	export RESTART=yes
 	source ${parameterfile}
+	echo -e "\n\n#########################################################################################################\n"
+	echo -e "This is a restart of variant calling for the ${PROJECT} project."
+	echo -e "\n#########################################################################################################\n\n"
 fi
 # get the samplemap file
 if [[ -z $2 ]]; then
