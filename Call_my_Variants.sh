@@ -115,7 +115,6 @@
 export PBIN=$(dirname $0)
 export SLSBIN=${PBIN}/slurm-scripts
 
-source ${PBIN}/config.sh
 source ${PBIN}/basefunctions.sh
 
 ############################################################
@@ -129,14 +128,13 @@ if [ -z $1 ]; then
 		if [[ ${outputdir} == "q" ]]; then exit; fi;
 	done
 else
-	${outputdir}=$1
+	outputdir=$1
 fi
-outputdir=$(echo "${outputdir}" | sed -e 's/\/$//')
+export outputdir=$(echo "${outputdir}" | sed -e 's/\/$//')
 export WORK_PATH="/scratch/$USER"
 export PROJECT=$(basename ${outputdir})
 export PROJECT_PATH=${WORK_PATH}/${PROJECT}
 export parameterfile="${PROJECT_PATH}/parameters.sh"
-export outputdir=${outputdir}
 
 # if this is a restart, get the previously captured details here
 if grep -q "outputdir=\"${outputdir}\"" ${parameterfile} > /dev/null 2>&1; then
@@ -146,24 +144,33 @@ if grep -q "outputdir=\"${outputdir}\"" ${parameterfile} > /dev/null 2>&1; then
 	echo -e "This is a restart of variant calling for the ${PROJECT} project."
 	echo -e "\n#########################################################################################################\n\n"
 fi
-# get the samplemap file
-if [[ -z $2 ]]; then
-	while [ -z ${samplemap} ] || [ ! -f ${samplemap} ]; do
-		echo -e "\n\nSpecify which samples to include. These need to be supplied in a tab-delimited text file, with one sample name per line followed \nby the full path to a g.vcf.gz file containing a variant call for that sample. \n"
-		read -e -p "Provide the name (and full path) of a file, or q to quit, and press [RETURN]: " samplemap
-		if [[ ${samplemap} == "q" ]]; then exit; fi;
-	done
-else
-	samplemap=$2 # the file that contains the list of g.vcf.gz files
-fi
 
-if [ -z ${PED} ]; then
-	while [ -z ${PED} ] || [[ ! -f ${PED} ]]; do
-		echo -e "\n\nProvide the pedigree file that includes this cohort of samples.\n"
-		read -e -p "Type full path to the filename, or q to quit, and press [RETURN]: " PED
-		if [[ ${PED} == "q" ]]; then exit; fi;
+# start from samplemap (make a new workspace just for this project) or existing an GenomicsDBworkspace
+while [ -z ${INPUT} ] || [ ! -e ${INPUT} ]; do
+	echo -e "\n\nSpecify which samples to include either by providing a samplemap file or a pre-existing GenomicsDB workspace directory."
+	echo -e "\nIf this is a project for which you have a collection of unaggregated sample g.vcf files, use a samplemap."
+	echo -e "The format is a tab-delimited text file, with one sample name per line followed by the full path to a g.vcf.gz file containing a variant call for that sample. \n"
+	echo -e "If you have already aggregated all required sample g.vcf files into a GenomicsDBworkspace, you can use that instead."
+	read -e -p "Provide the full path of a samplemap file, or the path of a GenomicsDB workspace directory, or q to quit, and press [RETURN]: " INPUT
+		if [[ ${INPUT} == "q" ]]; then exit; fi;
+done
+while [ -z ${ASSEMBLY} ]; do
+	while [[ "${ASSEMBLY}" != GRCh37 ]] && [[ "${ASSEMBLY}" != hg38 ]]; do
+		echo -e "\n\nProvide the assembly used for this cohort of samples. Currently options are GRCh37 or hg38.\n"
+		read -e -p "Type assembly name, or q to quit, and press [RETURN]: " ASSEMBLY
+		if [[ ${ASSEMBLY} == "q" ]]; then exit; fi;
 	done
-fi
+done
+source ${PBIN}/config.sh
+while [ -z ${PED} ] || [[ ! -f ${PED} ]]; do
+	echo -e "\n\nProvide the pedigree file that includes this cohort of samples.\n"
+	read -e -p "Type full path to the filename, or q to quit, and press [RETURN]: " PED
+	if [[ ${PED} == "q" ]]; then exit; fi;
+done
+####################################################
+####################################################
+####################################################
+####################################################
 # pick up the users email address if not provided
 # if [ -z ${email} ]; then email="walrus"; fi
 # while [[ ${email} == "walrus" ]]; do
@@ -213,7 +220,14 @@ if [ "${capture}" == "yes" ]; then
 			if [[ $platform == "q" ]]; then exit; fi
 		done
 		if [ ! -z ${platform} ]; then
-			vqsrinfile=${PLATFORMS}/${platform}.bed
+			if [ -f ${PLATFORMS}/${platform}.interval_list ]; then
+				vqsrinfile=${PLATFORMS}/${platform}.interval_list
+			elif [ -f ${PLATFORMS}/${platform}.bed ]; then
+				vqsrinfile=${PLATFORMS}/${platform}.bed
+			else
+				echo -e "A capture file (.bed or .interval_list) could not be found for ${platform}. Quitting...."
+				exit 1
+			fi
 		fi
 	fi
 	if [ ! -z $vqsrinfile ]; then
@@ -230,7 +244,7 @@ fi
 
 if [ -z ${sexchromosomes} ]; then
 	while [[ ${sexchromosomes} != "yes" ]] && [[ ${sexchromosomes} != "no" ]]; do
-		echo -e "\nWas gender (either reported or calculated) used to determine sex chromosome ploidy when generating the input g.vcfs?\n"
+		echo -e "\nWas sex (either reported or calculated) used to determine sex chromosome ploidy when generating the input g.vcfs?\n"
 		read -e -p "Enter yes or no, or q to quit, and press [RETURN]: " sexchromosomes
 		if [[ ${sexchromosomes} == "q" ]]; then exit; fi
 	done
@@ -240,37 +254,163 @@ export sexchromosomes=${sexchromosomes}
 ################################
 # set up the working directory
 
-mkdir -p ${PROJECT_PATH}
-if [ ! -f ${PROJECT_PATH}/samplemap.txt ]; then
-	cp ${samplemap} ${PROJECT_PATH}/samplemap.txt
+mkdir -p ${PROJECT_PATH}/done/master
+if [ -z ${RESTART} ]; then
+	echo $0 ${outputdir} | tee ${PROJECT_PATH}/jobReSubmit.sh
+	chmod +x ${PROJECT_PATH}/jobReSubmit.sh
 fi
-if [ ! -f ${PROJECT_PATH}/ped.txt ]; then
-	cp ${PED} ${PROJECT_PATH}/ped.txt
-	PED=${PROJECT_PATH}/ped.txt
-fi
-samplemap=${PROJECT_PATH}/samplemap.txt
 
-# work out which directory we are launching from so that we can return to it for the final cleanup
-launch=$PWD
-cd ${PROJECT_PATH}
-
-####################################
-## Do the gender report here
-if [ ! -f ${PROJECT_PATH}/done/master/${PROJECT}_GenderReport.txt.done ] && [ ${sexchromosomes} == "yes" ]; then
-	mkdir -p ${PROJECT_PATH}/done/master
-	echo -e "Subject\tReported\tDetermined\tChromosomes\tProcessed\tWarnings" > ${PROJECT_PATH}/${PROJECT}_GenderReport.txt
-	for i in $(awk '{ print $1; }' ${samplemap} | sort -n | tr "\n" " "); do
-#		(echo "Current ID: $i" 1>&2)
-		coverage=$(dirname $(awk '$1 ~ /^'${i}'$/{ print $2; }' ${samplemap}))/*coverage.sh
-		if [ ! -f ${coverage} ]; then
-			(echo -e "ERROR: Can not find a coverage file for individual ${i} in $(dirname $(dirname ${coverage}))." 1>&2)
+if  [ -f ${INPUT} ]; then
+	samplemap=${INPUT}
+	if [ ! -f ${PROJECT_PATH}/done/master/samplemap.txt.done ]; then
+		COUNT=0
+		CMD="rsync -aP ${INPUT} ${PROJECT_PATH}/samplemap.txt"
+		until [ $COUNT -gt 10 ] || eval ${CMD}
+		do
+			((COUNT++))
+			sleep 20s
+			(echo "--FAILURE--      Syncing ${INPUT} to ${PROJECT_PATH}/samplemap.txt failed. Retrying..." 1>&2)
+		done
+		if [ $COUNT -le 10 ]
+		then
+			touch ${PROJECT_PATH}/done/master/samplemap.txt.done
+		else
+			(echo "--FAILURE--      Unable to move ${INPUT} to ${PROJECT_PATH}/samplemap.txt" 1>&2)
 			exit 1
 		fi
-		reported=$(awk '$2 ~ /^'${i}'$/{ print $5; }' ${PED})
+	fi
+elif [ -d ${INPUT} ]; then
+	genomicsDB_workpath=${INPUT}
+	if [ ! -f ${PROJECT_PATH}/done/master/samplemap.txt.done ]; then
+		# transfer the allsamples file 
+		COUNT=0
+		CMD="rsync -aP ${INPUT}/allsamples.txt ${PROJECT_PATH}/samplemap.txt"
+		until [ $COUNT -gt 10 ] || eval ${CMD}
+		do
+			((COUNT++))
+			sleep 20s
+			(echo "--FAILURE--      Syncing ${INPUT}/allsamples.txt to ${PROJECT_PATH}/samplemap.txt failed. Retrying..." 1>&2)
+		done
+		if [ $COUNT -le 10 ]
+		then
+			touch ${PROJECT_PATH}/done/master/samplemap.txt.done
+		else
+			(echo "--FAILURE--      Unable to move ${INPUT}/allsamples.txt to ${PROJECT_PATH}/samplemap.txt" 1>&2)
+			exit 1
+		fi
+	fi
+	if [ ! -f ${PROJECT_PATH}/done/master/regions.txt.done ]; then
+	
+			# transfer the regions file and replace the contigarray with the one previously used for import
+		COUNT=0
+		CMD="rsync -aP ${INPUT}/regions.txt ${PROJECT_PATH}"
+		until [ $COUNT -gt 10 ] || eval ${CMD}
+		do
+			((COUNT++))
+			sleep 20s
+			(echo "--FAILURE--      Syncing ${INPUT}/regions.txt to ${PROJECT_PATH} failed. Retrying..." 1>&2)
+		done
+		if [ $COUNT -le 10 ]
+		then
+			touch ${PROJECT_PATH}/done/master/regions.txt.done
+		else
+			(echo "--FAILURE--      Unable to move ${OUTPUTDIR}/regions.txt to ${PROJECT_PATH}" 1>&2)
+			exit 1
+		fi
+	fi
+	# may not want to use all regions, so if CONTIGARRAY is already set then don't do this:
+	
+	if [[ ${#CONTIGARRAY[@]} == 0 ]]; then #[ ! -f ${PROJECT_PATH}/done/master/contigarray.done ]; then
+		# make the contigarray based on the regions.txt file
+		CONTIGARRAY=()
+		for i in $(cat ${PROJECT_PATH}/regions.txt); do 
+			if [ -z ${CONTIGARRAY[0]} ]; then
+				CONTIGARRAY=($i)
+			else 
+				CONTIGARRAY=(${CONTIGARRAY[@]} $i)
+			fi
+		done
+		touch ${PROJECT_PATH}/done/master/contigarray.done
+	fi
+fi
+if [ ! -f ${PROJECT_PATH}/done/master/ped.txt.done ]; then
+	COUNT=0
+	CMD="rsync -aP ${PED} ${PROJECT_PATH}/ped.txt"
+	until [ $COUNT -gt 10 ] || eval ${CMD}
+	do
+		((COUNT++))
+		sleep 20s
+		(echo "--FAILURE--      Syncing ${PED} to ${PROJECT_PATH}/ped.txt failed. Retrying..." 1>&2)
+	done
+	if [ $COUNT -le 10 ]
+	then
+		touch ${PROJECT_PATH}/done/master/ped.txt.done
+		PED="${PROJECT_PATH}/ped.txt"
+	else
+		(echo "--FAILURE--      Unable to move ${PED} to ${PROJECT_PATH}/ped.txt" 1>&2)
+		exit 1
+	fi
+fi
+
+#####################################################
+# Store the collected information in a file to allow restart and ensure these values do not have to be re-entered - they should not change for a restart!
+if [ ! -f ${PROJECT_PATH}/done/master/parameter.sh.done ]; then
+	if [ ! -z ${mail} ]; then
+		echo "email=\"${email}\"" >> ${parameterfile}
+	fi
+	echo "INPUT=\"${INPUT}\"" >> ${parameterfile}
+	echo "PED=\"${PED}\"" >> ${parameterfile}
+	echo "capture=\"${capture}\"" >> ${parameterfile}
+	if [ ! -z ${vqsrinfile} ]; then
+		echo "vqsrinfile=\"${vqsrinfile}\"" >> ${parameterfile}
+	fi
+	if [ ! -z ${vqsrinfilepadding} ]; then
+		echo "vqsrinfilepadding=\"${vqsrinfilepadding}\"" >> ${parameterfile}
+	fi
+	if [ ! -z ${allelespecific} ]; then
+		echo "allelespecific=${allelespecific}" >> ${parameterfile}
+	fi
+	echo "CONTIGARRAY=(${CONTIGARRAY[@]})" >> ${parameterfile}
+	echo "popdata=\"${popdata}\"" >> ${parameterfile}
+	echo "outputdir=\"${outputdir}\"" >> ${parameterfile}
+	if [ ! -z ${samplemap} ]; then
+		echo "samplemap=\"${samplemap}\"" >> ${parameterfile}
+	fi
+	if [ ! -z ${genomicsDB_workpath} ]; then
+		echo "genomicsDB_workpath=\"${genomicsDB_workpath}\"" >> ${parameterfile}
+	fi		
+	echo "REF=\"${REF}\"" >> ${parameterfile}
+	echo "ASSEMBLY=\"${ASSEMBLY}\"" >> ${parameterfile}
+	echo "TRUEX=\"${TRUEX}\"" >> ${parameterfile}
+	echo "DBSNP=\"${DBSNP}\"" >> ${parameterfile}
+	echo "hapmapversion=\"${hapmapversion}\"" >> ${parameterfile}
+	echo "omniversion=\"${omniversion}\"" >> ${parameterfile}
+	echo "KGversion=\"${KGversion}\"" >> ${parameterfile}
+	echo "millsversion=\"${millsversion}\"" >> ${parameterfile}
+	echo "sexchromosomes=\"${sexchromosomes}\"" >> ${parameterfile}
+	touch ${PROJECT_PATH}/done/master/parameter.sh.done
+fi
+
+####################################################
+
+## Do the gender report here
+if [ ! -f ${PROJECT_PATH}/done/master/${PROJECT}_GenderReport.txt.done ] && [ ${sexchromosomes} == "yes" ]; then
+	echo -e "Subject\tReported\tDetermined\tChromosomes\tProcessed\tWarnings" > ${PROJECT_PATH}/${PROJECT}_GenderReport.txt
+	for i in $(awk '{ print $1; }' ${PROJECT_PATH}/samplemap.txt | sort -n | tr "\n" " "); do
+		(echo "Current ID: $i" 1>&2)
+		coverage=$(dirname $(awk  '$1 ~ /^'${i}'$/ { print $2; }' ${PROJECT_PATH}/samplemap.txt))/ChromosomalSex.sh
+		if [ ! -f ${coverage} ]; then
+			coverage=$(dirname $(awk '$1 ~/^'${i}'$/ { print $2; }' ${PROJECT_PATH}/samplemap.txt))/*coverage.sh
+			if [ ! -f ${coverage} ]; then
+				(echo -e "ERROR: Can not find a coverage file for individual ${i} in $(dirname $(dirname ${coverage}))." 1>&2)
+				exit 1
+			fi
+		fi
+		reported=$(awk '$2 ~ /^'${i}'$/{ print $5; }' ${PROJECT_PATH}/ped.txt )
 		reported=${reported,,} # Lower case
 		reported=${reported:0:1} # First character only.
 		if [ -z ${reported} ]; then
-			(echo -e "ERROR: Can not find an entry for individual ${i} in file ${PED} to determine reported gender." 1>&2)
+			(echo -e "ERROR: Can not find an entry for individual ${i} in file ${PROJECT_PATH}/ped.txt to determine reported gender." 1>&2)
 			exit 1
 		elif [ "${reported}" == "m" ] || [ "${reported}" == "1" ]; then
 			reportedgender=Male
@@ -279,15 +419,15 @@ if [ ! -f ${PROJECT_PATH}/done/master/${PROJECT}_GenderReport.txt.done ] && [ ${
 		elif [ "${reported}" -eq 0 ]; then
 			reportedgender=Unknown
 		else
-			(echo -e "ERROR: The value ${reported} for ${i} in ${PED} does not match a gender definition." 1>&2)
+			(echo -e "ERROR: The value ${reported} for ${i} in ${PROJECT_PATH}/ped.txt does not match a gender definition." 1>&2)
 			exit 1
 		fi
-		determinedgender=$(grep -m 1 "^#Gender:" ${coverage} | sed 's/^#Gender:[[:space:]]*\(.*\)$/\1/')
+		determinedgender=$(grep -m 1 "^#Sex:" ${coverage} | sed 's/^#Sex:[[:space:]]*\(.*\)$/\1/')
 		sexchrom=$(grep -m 1 "#SexChr:" ${coverage} | sed 's/^#SexChr:[[:space:]]*\(.*\)$/\1/')
 		alert1=""
 		process=""
-		if [ "${reportedgender}" != "${determinedgender}" ]; then
-			alert1="ALERT: The determined gender does not match the reported gender."
+		if [ "${reportedgender}" != "Unknown" ] && [ "${reportedgender}" != "${determinedgender}" ]; then
+			alert1="ALERT: The determined sex does not match the reported sex."
 		fi
 		alert2=""
 		if [ "${sexchrom}" != "XX" ] && [ "${sexchrom}" != "XY" ]; then
@@ -303,35 +443,15 @@ if [ ! -f ${PROJECT_PATH}/done/master/${PROJECT}_GenderReport.txt.done ] && [ ${
 	touch ${PROJECT_PATH}/done/master/${PROJECT}_GenderReport.txt.done
 fi
 
-#####################################################
-# Store the collected information in a file to allow restart and ensure these values do not have to be re-entered - they should not change for a restart!
-if [ ! -f ${PROJECT_PATH}/done/master/parameter.sh.done ]; then
-	echo "email=\"${email}\"" >> ${parameterfile}
-	echo "PED=\"${PED}\"" >> ${parameterfile}
-	echo "capture=\"${capture}\"" >> ${parameterfile}
-	echo "vqsrinfile=\"${vqsrinfile}\"" >> ${parameterfile}
-	echo "vqsrinfilepadding=\"${vqsrinfilepadding}\"" >> ${parameterfile}
-	echo "allelespecific=${allelespecific}" >> ${parameterfile}
-	echo "CONTIGARRAY=(${CONTIGARRAY[@]})" >> ${parameterfile}
-	echo "popdata=\"${popdata}\"" >> ${parameterfile}
-	echo "outputdir=\"${outputdir}\"" >> ${parameterfile}
-	echo "samplemap=\"${samplemap}\"" >> ${parameterfile}
-	echo "REF=\"${REF}\"" >> ${parameterfile}
-	echo "TRUEX=\"${TRUEX}\"" >> ${parameterfile}
-	echo "DBSNP=\"${DBSNP}\"" >> ${parameterfile}
-	echo "hapmapversion=\"${hapmapversion}\"" >> ${parameterfile}
-	echo "omniversion=\"${omniversion}\"" >> ${parameterfile}
-	echo "KGversion=\"${KGversion}\"" >> ${parameterfile}
-	echo "millsversion=\"${millsversion}\"" >> ${parameterfile}
-	echo "sexchromosomes=\"${sexchromosomes}\"" >> ${parameterfile}
-	touch ${PROJECT_PATH}/done/master/parameter.sh.done
-fi
+# work out which directory we are launching from so that we can return to it for the final cleanup
+launch=$PWD
+cd ${PROJECT_PATH}
 
-####################################################
+####################################
+
 # Set up the slurm jobs
 
 #### GenomicsDBimport
-
 mkdir -p ${PROJECT_PATH}/slurm/GenomeDB
 importArray=""
 for i in $(seq 1 ${#CONTIGARRAY[@]}); do
@@ -340,18 +460,28 @@ for i in $(seq 1 ${#CONTIGARRAY[@]}); do
          importArray=$(appendList "$importArray"  $i ",")
     fi
 done
-
 if [ "$importArray" != "" ]; then
-	importjob=$(sbatch -J Import_${PROJECT} --array ${importArray}%6 ${mailme} ${SLSBIN}/GenomeDBimport.sl | awk '{print $4}')
-	if [ $? -ne 0 ] || [ "$importjob" == "" ]; then
-		(printf "FAILED!\n" 1>&2)
-		exit 1
-	else
-		echo "Import_${PROJECT} job is ${importjob}"
-		(printf "%sx%-4d [%s] Logs @ %s\n" "$importjob" $(splitByChar "$importArray" "," | wc -w) $(condenseList "$importArray") "${PROJECT_PATH}/slurm/GenomeDB/import-${importjob}_*.out" 1>&2)
+	if [ -z ${genomicsDB_workpath} ]; then
+		importjob=$(sbatch -J Import_${PROJECT} --array ${importArray}%6 ${mailme} ${SLSBIN}/GenomeDBimport.sl | awk '{print $4}')
+		if [ $? -ne 0 ] || [ "$importjob" == "" ]; then
+			(printf "FAILED!\n" 1>&2)
+			exit 1
+		else
+			echo "Import_${PROJECT} job is ${importjob}"
+			(printf "%sx%-4d [%s] Logs @ %s\n" "$importjob" $(splitByChar "$importArray" "," | wc -w) $(condenseList "$importArray") "${PROJECT_PATH}/slurm/GenomeDB/import-${importjob}_*.out" 1>&2)
+		fi
+	elif [ ! -z ${genomicsDB_workpath} ]; then
+		# make a slurm script that rsyncs the contig workspaces from the genomicsDB_workpath with identical structure and paths as the standard import
+		importjob=$(sbatch -J Copy_${PROJECT} --array ${importArray}%6 ${mailme} ${SLSBIN}/Copy.sl | awk '{print $4}')
+		if [ $? -ne 0 ] || [ "$importjob" == "" ]; then
+			(printf "FAILED!\n" 1>&2)
+			exit 1
+		else
+			echo "Import_${PROJECT} job is ${importjob}"
+			(printf "%sx%-4d [%s] Logs @ %s\n" "$importjob" $(splitByChar "$importArray" "," | wc -w) $(condenseList "$importArray") "${PROJECT_PATH}/slurm/GenomeDB/import-${importjob}_*.out" 1>&2)
+		fi
 	fi
 fi
-
 #####Joint Genotyping by contig
 
 mkdir -p ${PROJECT_PATH}/slurm/genotype
@@ -483,7 +613,7 @@ fi
 #### Mendelian violations report -dependent on merge of unsplit contigs only
 mkdir -p ${PROJECT_PATH}/slurm/mendelviol
 if [ ! -f "${PROJECT_PATH}/done/mendelviol/${PROJECT}_MendelianViolations.txt.done" ]; then
-	mendelvioljob=$(sbatch $(depCheck $mergejob) -J MendelViol_${PROJECT} ${mailme} ${SLSBIN}/mendelviol.sl ${PROJECT_PATH}/merge/${PROJECT}.vcf.gz ${PED} | awk '{print $4}')
+	mendelvioljob=$(sbatch $(depCheck $mergejob) -J MendelViol_${PROJECT} ${mailme} ${SLSBIN}/mendelviol.sl ${PROJECT_PATH}/merge/${PROJECT}.vcf.gz | awk '{print $4}')
 	if [ $? -ne 0 ] || [ "$mendelvioljob" == "" ]; then
 		(printf "FAILED!\n" 1>&2)
 		exit 1
