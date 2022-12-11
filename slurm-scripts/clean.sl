@@ -1,10 +1,9 @@
 #!/bin/bash
-# clean.sl 
+# clean.sl
 #SBATCH --job-name	Clean
 #SBATCH --time		1:00:00
 #SBATCH --mem		1G
 #SBATCH --cpus-per-task	1
-#SBATCH --mail-type FAIL,END
 #SBATCH --error		VariantCallCleanup-%j.out
 #SBATCH --output	VariantCallCleanup-%j.out
 

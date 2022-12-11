@@ -1,11 +1,10 @@
 #!/bin/bash
-# mergesplit.sl 
+# mergesplit.sl
 # this script is intended to take a collection of non-overlapping contig vcf.gz files, all with the same individuals in them, and stitch them together into one vcf.gz
 #SBATCH --job-name	Merge
 #SBATCH --time		12:00:00
-#SBATCH --mem		4G
+#SBATCH --mem		12G
 #SBATCH --cpus-per-task	2
-#SBATCH --mail-type FAIL,END
 #SBATCH --error		slurm/mergesplit/mergesplit-%j.out
 #SBATCH --output	slurm/mergesplit/mergesplit-%j.out
 
@@ -24,7 +23,7 @@ mkdir -p ${PROJECT_PATH}/mergesplit
 if [  ! -f ${PROJECT_PATH}/done/mergesplit/$(basename ${splitmergeout}).done ]; then
 	module purge
 	module load GATK4
-	cmd="srun gatk --java-options -Xmx2g MergeVcfs \
+	cmd="srun gatk --java-options -Xmx8g MergeVcfs \
 		${variant} \
 		-D ${REFD} \
 		-O ${splitmergeout}"
@@ -37,8 +36,8 @@ else
 fi
 module purge
 module load BCFtools
-# generate the list of IDs 
-if [ -f ${PROJECT_PATH}/done/mergesplit/${PROJECT}_ID.list.done ]; then
+# generate the list of IDs
+if [ -f ${PROJECT_PATH}/done/mergesplit/${PROJECT}_Split_ID.list.done ]; then
 	echo "INFO: Output from Merge for ${PROJECT}_Split_ID.list already available"
 else
 	cmd="$(which bcftools) query -l ${splitmergeout} > ${PROJECT_PATH}/mergesplit/${PROJECT}_Split_ID.list"

@@ -1,11 +1,10 @@
 #!/bin/bash
-#splitmultiallelic.sl 
+#splitmultiallelic.sl
 
 #SBATCH --job-name	SplitMulti
 #SBATCH --time		8:00:00
 #SBATCH --mem		1G
 #SBATCH --cpus-per-task	2
-#SBATCH --mail-type FAIL,END
 #SBATCH --error		slurm/split/split-%A_%a.out
 #SBATCH --output	slurm/split/split-%A_%a.out
 
@@ -28,12 +27,12 @@ mkdir -p ${PROJECT_PATH}/split
 module purge
 module load BCFtools
 if [ ${sexchromosomes} == "yes" ]; then
-	supernumary=$(awk '$5 ~ /^XXX|XXY|XYY|XXXX|XXXY|XYYY$/ { print $1 }' ${PROJECT_PATH}/${PROJECT}_GenderReport.txt | wc -l)
+	supernumary=$(awk '$5 ~ /^XXX|XXXX|XXXY|XYYY$/ { print $1 }' ${PROJECT_PATH}/${PROJECT}_GenderReport.txt | wc -l)
 else
 	supernumary=0
 fi
 if [ ${supernumary} -gt 0 ]; then
-	superstring=$(awk '$5 ~ /^XXX|XXY|XYY|XXXX|XXXY|XYYY$/ { print $1 }' ${PROJECT_PATH}/${PROJECT}_GenderReport.txt | tr "\n" "," | sed 's/,$//')
+	superstring=$(awk '$5 ~ /^XXX|XXXX|XXXY|XYYY$/ { print $1 }' ${PROJECT_PATH}/${PROJECT}_GenderReport.txt | tr "\n" "," | sed 's/,$//')
 	if [ -f ${PROJECT_PATH}/done/split/${CONTIG}_exclude.vcf.gz.done ]; then
 		echo "INFO: Output excluding supernumary sex chromosome samples from contig ${CONTIG} already available"
 	else
@@ -63,7 +62,7 @@ if [ -f ${PROJECT_PATH}/done/split/${CONTIG}_Split.vcf.gz.done ]; then
 	echo "INFO: Output from splitting multiallelics for contig ${CONTIG} already available"
 else
 	scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=SplitMulti_${PROJECT}_${CONTIG}
-	# have made this in to a two step process because it is possible that they need to be split first then left aligned and normalised 
+	# have made this in to a two step process because it is possible that they need to be split first then left aligned and normalised
 	cmd="$(which bcftools) norm -m -any ${variant} | $(which bcftools) norm -f ${REFA} -Oz -o ${PROJECT_PATH}/split/${CONTIG}_Split.vcf.gz"
 	mkdir -p ${PROJECT_PATH}/split
 	set -o pipefail

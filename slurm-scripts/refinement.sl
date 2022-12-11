@@ -1,11 +1,10 @@
 #!/bin/bash
-#refinement.sl 
+#refinement.sl
 
 #SBATCH --job-name	Refine
-#SBATCH --time		12:00:00
-#SBATCH --mem		24G
+#SBATCH --time		48:00:00
+#SBATCH --mem		72G
 #SBATCH --cpus-per-task	2
-#SBATCH --mail-type FAIL,END
 #SBATCH --error		slurm/refinement/refinement-%A_%a.out
 #SBATCH --output	slurm/refinement/refinement-%A_%a.out
 
@@ -39,7 +38,7 @@ if [[ "${CONTIG}" =~ ^X.* ]] && [ ${sexchromosomes} == "yes" ]; then
 		if [ -f ${PROJECT_PATH}/done/refinement/${CONTIG}_refine.vcf.gz.done ]; then
 			echo "INFO: Low GQ filter for ${CONTIG} already complete."
 		else
-			scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=LowQual_${PROJECT}_${CONTIG}	
+			scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=LowQual_${PROJECT}_${CONTIG}
 			cmd="srun gatk --java-options -Xmx12g \
 				VariantFiltration \
 				-R ${REFA} \
@@ -56,7 +55,7 @@ if [[ "${CONTIG}" =~ ^X.* ]] && [ ${sexchromosomes} == "yes" ]; then
 		fi
 	else
 	# this option runs any XPAR regions as standard diploid (genotype posteriors, de novos and GQ filter included) but only runs GQ filter on the true X (as it will be disomic in females but monosomic in males)
-	#extract the PARX regions from the recal vcf and calculate posteriors 
+	#extract the PARX regions from the recal vcf and calculate posteriors
 		if [ -f ${PROJECT_PATH}/done/refinement/${CONTIG}_XPAR.vcf.gz.done ]; then
 			echo "INFO: XPAR selection for ${CONTIG} already complete."
 		else
@@ -67,7 +66,7 @@ if [[ "${CONTIG}" =~ ^X.* ]] && [ ${sexchromosomes} == "yes" ]; then
 				-V ${PROJECT_PATH}/applyrecal/${CONTIG}_recal.vcf.gz \
 				-XL ${TRUEX} \
 				-O ${PROJECT_PATH}/refinement/${CONTIG}_XPAR.vcf.gz"
-		
+
 			mkdir -p ${PROJECT_PATH}/refinement/
 			echo $cmd
 			eval $cmd || exit 1$?
@@ -78,13 +77,14 @@ if [[ "${CONTIG}" =~ ^X.* ]] && [ ${sexchromosomes} == "yes" ]; then
 			echo "INFO: Posteriors for XPAR ${CONTIG} already complete."
 		else
 			scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=Posteriors_${PROJECT}_${CONTIG}
-			cmd="srun gatk --java-options -Xmx12g \
+			cmd="srun gatk --java-options -Xmx68g \
 				CalculateGenotypePosteriors \
 				-R ${REFA} \
 				-V ${PROJECT_PATH}/refinement/${CONTIG}_XPAR.vcf.gz \
 				-L ${CONTIG} \
 				${support} \
-				-ped ${PED} \
+				-ped ${PROJECT_PATH}/ped.txt \
+				--tmp-dir $TMPDIR \
 				-O ${PROJECT_PATH}/refinement/${CONTIG}_XPAR_post.vcf.gz"
 			echo $cmd
 			eval $cmd || exit 1$?
@@ -97,14 +97,14 @@ if [[ "${CONTIG}" =~ ^X.* ]] && [ ${sexchromosomes} == "yes" ]; then
 		if [ -f ${PROJECT_PATH}/done/refinement/${CONTIG}_TRUEX.vcf.gz.done ]; then
 			echo "INFO: TRUEX selection for ${CONTIG} already complete."
 		else
-			scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=ExtractTrueX_${PROJECT}_${CONTIG}	
+			scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=ExtractTrueX_${PROJECT}_${CONTIG}
 			cmd="srun gatk --java-options -Xmx12g \
 				SelectVariants \
 				-R ${REFA} \
 				-V ${PROJECT_PATH}/applyrecal/${CONTIG}_recal.vcf.gz \
 				-L ${TRUEX} \
 				-O ${PROJECT_PATH}/refinement/${CONTIG}_TRUEX.vcf.gz"
-		
+
 			echo $cmd
 			eval $cmd || exit 1$?
 			touch ${PROJECT_PATH}/done/refinement/${CONTIG}_TRUEX.vcf.gz.done
@@ -113,7 +113,7 @@ if [[ "${CONTIG}" =~ ^X.* ]] && [ ${sexchromosomes} == "yes" ]; then
 #		if [ -f ${PROJECT_PATH}/done/refinement/${CONTIG}_XPAR_denovo.vcf.gz.done ]; then
 #			echo "INFO: De novo for ${CONTIG}_XPAR already complete."
 #		else
-#			scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=DeNovo_${PROJECT}_${CONTIG}	
+#			scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=DeNovo_${PROJECT}_${CONTIG}
 #			cmd="srun gatk --java-options -Xmx12g \
 #				VariantAnnotator \
 #				-R ${REFA} \
@@ -121,7 +121,7 @@ if [[ "${CONTIG}" =~ ^X.* ]] && [ ${sexchromosomes} == "yes" ]; then
 #				-V ${PROJECT_PATH}/refinement/${CONTIG}_XPAR_post.vcf.gz \
 #				-L ${CONTIG} \
 #				-XL ${TRUEX} \
-#				-ped ${PED} \
+#				-ped ${PROJECT_PATH}/ped.txt \
 #				-O ${PROJECT_PATH}/refinement/${CONTIG}_XPAR_denovo.vcf.gz"
 #				# -pedValidationType SILENT \
 
@@ -135,7 +135,7 @@ if [[ "${CONTIG}" =~ ^X.* ]] && [ ${sexchromosomes} == "yes" ]; then
 		if [ -f ${PROJECT_PATH}/done/refinement/${CONTIG}_remerge.vcf.gz.done ]; then
 			echo "INFO: Merge for ${CONTIG} already complete."
 		else
-			scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=MergeX_${PROJECT}_${CONTIG}	
+			scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=MergeX_${PROJECT}_${CONTIG}
 			cmd="srun gatk --java-options -Xmx2g MergeVcfs \
 				-I ${PROJECT_PATH}/refinement/${CONTIG}_XPAR_post.vcf.gz \
 				-I ${PROJECT_PATH}/refinement/${CONTIG}_TRUEX.vcf.gz \
@@ -153,7 +153,7 @@ if [[ "${CONTIG}" =~ ^X.* ]] && [ ${sexchromosomes} == "yes" ]; then
 #		if [ -f ${PROJECT_PATH}/done/refinement/${CONTIG}_remerge.vcf.gz.tbi.done ]; then
 #			echo "INFO: Index for Merge for ${CONTIG} already complete."
 #		else
-#			scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=IndexMergeX_${PROJECT}_${CONTIG}	
+#			scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=IndexMergeX_${PROJECT}_${CONTIG}
 #			module purge
 #			module load BCFtools
 #			cmd="$(which bcftools) index -t ${PROJECT_PATH}/refinement/${CONTIG}_remerge.vcf.gz"
@@ -164,7 +164,7 @@ if [[ "${CONTIG}" =~ ^X.* ]] && [ ${sexchromosomes} == "yes" ]; then
 		if [ -f ${PROJECT_PATH}/done/refinement/${CONTIG}_refine.vcf.gz.done ]; then
 			echo "INFO: Merge for ${CONTIG} already complete."
 		else
-			scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=LowQual_${PROJECT}_${CONTIG}	
+			scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=LowQual_${PROJECT}_${CONTIG}
 #			module purge
 #			module load GATK4
 			cmd="srun gatk --java-options -Xmx12g \
@@ -179,14 +179,14 @@ if [[ "${CONTIG}" =~ ^X.* ]] && [ ${sexchromosomes} == "yes" ]; then
 			eval $cmd || exit 1$?
 			touch ${PROJECT_PATH}/done/refinement/${CONTIG}_refine.vcf.gz.done
 		fi
-	fi	
+	fi
 elif [[ "${CONTIG}" =~ ^Y.* ]] && [ ${sexchromosomes} == "yes" ]; then
 #	module purge
 #	module load GATK4
 	if [ -f ${PROJECT_PATH}/done/refinement/${CONTIG}_refine.vcf.gz.done ]; then
 		echo "INFO: Low GQ filter for ${CONTIG} already complete."
 	else
-		scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=LowQual_${PROJECT}_${CONTIG}	
+		scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=LowQual_${PROJECT}_${CONTIG}
 		cmd="srun gatk --java-options -Xmx12g \
 			VariantFiltration \
 			-R ${REFA} \
@@ -206,13 +206,14 @@ else
 		echo "INFO: Posteriors for ${CONTIG} already complete."
 	else
 		scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=Posteriors_${PROJECT}_${CONTIG}
-		cmd="srun gatk --java-options -Xmx12g \
+		cmd="srun gatk --java-options -Xmx68g \
 			CalculateGenotypePosteriors \
 			-R ${REFA} \
 			-V ${PROJECT_PATH}/applyrecal/${CONTIG}_recal.vcf.gz \
 			-L ${CONTIG} \
 			${support} \
-			-ped ${PED} \
+			-ped ${PROJECT_PATH}/ped.txt \
+			--tmp-dir $TMPDIR \
 			-O ${PROJECT_PATH}/refinement/${CONTIG}_post.vcf.gz"
 		mkdir -p ${PROJECT_PATH}/refinement/
 		echo $cmd
@@ -224,14 +225,14 @@ else
 #	if [ -f ${PROJECT_PATH}/done/refinement/${CONTIG}_denovo.vcf.gz.done ]; then
 #		echo "INFO: Posteriors for ${CONTIG} already complete."
 #	else
-#		scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=DeNovo_${PROJECT}_${CONTIG}		
+#		scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=DeNovo_${PROJECT}_${CONTIG}
 #			cmd="srun gatk --java-options -Xmx12g \
 #			VariantAnnotator \
 #			-R ${REFA} \
 #			-A PossibleDeNovo \
 #			-V ${PROJECT_PATH}/refinement/${CONTIG}_post.vcf.gz \
 #			-L ${CONTIG} \
-#			-ped ${PED} \
+#			-ped ${PROJECT_PATH}/ped.txt \
 #			-O ${PROJECT_PATH}/refinement/${CONTIG}_denovo.vcf.gz"
 #			#-pedValidationType SILENT \
 #		echo $cmd
@@ -244,7 +245,7 @@ else
 	if [ -f ${PROJECT_PATH}/done/refinement/${CONTIG}_refine.vcf.gz.done ]; then
 		echo "INFO: Low Quality filtration for ${CONTIG} already complete."
 	else
-		scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=LowQual_${PROJECT}_${CONTIG}			
+		scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=LowQual_${PROJECT}_${CONTIG}
 		cmd="srun gatk --java-options -Xmx12g \
 			VariantFiltration \
 			-R ${REFA} \
@@ -259,7 +260,7 @@ else
 		if [ -f ${PROJECT_PATH}/refinement/${CONTIG}_denovo.vcf.gz ]; then
 			rm ${PROJECT_PATH}/refinement/${CONTIG}_denovo.vcf.gz
 		fi
-	fi				
+	fi
 fi
 if [ -f ${PROJECT_PATH}/applyrecal/${CONTIG}_recal.vcf.gz ]; then
 	rm ${PROJECT_PATH}/applyrecal/${CONTIG}_recal.vcf.gz

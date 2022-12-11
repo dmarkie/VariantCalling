@@ -1,11 +1,10 @@
 #!/bin/bash
-#applyrecal.sl 
+#applyrecal.sl
 
 #SBATCH --job-name	ApplyRecal
 #SBATCH --time		12:00:00
 #SBATCH --mem		24G
 #SBATCH --cpus-per-task	2
-#SBATCH --mail-type FAIL,END
 #SBATCH --error		slurm/applyrecal/applyrecal-%A_%a.out
 #SBATCH --output	slurm/applyrecal/applyrecal-%A_%a.out
 
@@ -56,7 +55,7 @@ else
 	mkdir -p ${PROJECT_PATH}/done/applyrecal
 	touch ${PROJECT_PATH}/done/applyrecal/${CONTIG}_SNPrecal.vcf.gz.done
 fi
-	
+
 if [ -f ${PROJECT_PATH}/done/applyrecal/${CONTIG}_recal.vcf.gz.done ]; then
 	echo "INFO: INDEL recalibration for ${CONTIG} already complete."
 else
@@ -75,7 +74,7 @@ else
 		-jdk-deflater \
 		-jdk-inflater \
 		--mode INDEL"
-	
+
 	echo $cmd
 	eval $cmd || exit 1$?
 	touch ${PROJECT_PATH}/done/applyrecal/${CONTIG}_recal.vcf.gz.done
@@ -85,5 +84,5 @@ else
 fi
 
 exit 0
-	
+
 

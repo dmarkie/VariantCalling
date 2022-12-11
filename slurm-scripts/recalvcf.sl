@@ -1,11 +1,10 @@
 #!/bin/bash
 #recalvcf.sl - for variant recalibration
 #SBATCH --job-name	RecalibrateVCFs
-#SBATCH --time		8:00:00
-#SBATCH --mem		12G
+#SBATCH --time		18:00:00
+#SBATCH --mem		20G
 #SBATCH --array		1-2
 #SBATCH --cpus-per-task	2
-#SBATCH --mail-type FAIL,END
 #SBATCH --error 	slurm/recalibrate/recal-%A_%a.out
 #SBATCH --output	slurm/recalibrate/recal-%A_%a.out
 
@@ -16,7 +15,7 @@ source ${PROJECT_PATH}/parameters.sh
 MODEARRAY=(SNP INDEL)
 MODE=${MODEARRAY[$(( $SLURM_ARRAY_TASK_ID - 1 ))]}
 echo "${MODE} Recalibration"
-# check if job already done 
+# check if job already done
 if [ -e ${PROJECT_PATH}/done/recalibrate/${MODE}output.recal.done ]; then
 	echo "INFO: Output for ${MODE} VariantRecalibrator already available"
 	exit 0
@@ -29,10 +28,12 @@ if [ $MODE == "SNP" ]; then
 	if [ $capture == yes ]; then
 		annotations="-an QD -an MQ -an MQRankSum -an ReadPosRankSum -an FS -an SOR" # -an InbreedingCoeff
 	elif [ $capture == no ]; then
-		annotations="-an QD -an MQ -an MQRankSum -an ReadPosRankSum -an FS -an SOR" # -an InbreedingCoeff
-	fi	
+		annotations="-an QD -an MQ -an MQRankSum -an ReadPosRankSum -an FS -an SOR" #  the MQ annotation has been causing the failure of recalibration, -an MQ  -an InbreedingCoeff
+	fi
 	#need to use appropriate tranches
 	tranches="-tranche 100.0 -tranche 99.9 -tranche 99.0 -tranche 90.0"
+	#default max gaussians is 8 - if small number of samples (ie limited number of variants) then reduce eg 4
+#	maxgaus="--max-gaussians 4"
 elif [ $MODE == "INDEL" ]; then
 	#need to use appropriate resource files, appropriate priors, appropriate known, training and truth
 	resources="-resource:mills,known=false,training=true,truth=true,prior=12.0 ${millsversion} -resource:dbsnp,known=true,training=false,truth=false,prior=2.0 ${DBSNP}"
@@ -65,9 +66,9 @@ scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=Recal
 
 module purge
 module load R
-module load GATK4
+module load GATK4 #/4.1.8.1-GCCcore-8.3.0-Java-1.8 #/4.1.4.1-GCCcore-8.3.0-Java-1.8 # Additional VCF validation has been added as of 4.1.5. Some reference allele do not match anymore.
 
-cmd="srun gatk --java-options -Xmx8g \
+cmd="srun gatk --java-options -Xmx16g \
 	VariantRecalibrator \
 	-R ${REFA} \
 	${input} \

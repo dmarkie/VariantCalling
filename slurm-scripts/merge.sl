@@ -1,18 +1,17 @@
 #!/bin/bash
-# merge.sl 
+# merge.sl
 # this script is intended to take a collection of non-overlapping contig vcf.gz files, all with the same individuals in them, and stitch them together into one vcf.gz
 #SBATCH --job-name	Merge
 #SBATCH --time		12:00:00
-#SBATCH --mem		4G
+#SBATCH --mem		12G
 #SBATCH --cpus-per-task	2
-#SBATCH --mail-type FAIL,END
 #SBATCH --error		slurm/merge/merge-%j.out
 #SBATCH --output	slurm/merge/merge-%j.out
 
 echo "$(date) on $(hostname)"
 source ${PROJECT_PATH}/parameters.sh
 
-# generate the list of inputs 
+# generate the list of inputs
 for CONTIG in ${CONTIGARRAY[@]}; do
 	variant="${variant} -I ${PROJECT_PATH}/refinement/${CONTIG}_refine.vcf.gz"
 done
@@ -26,7 +25,7 @@ if [ -f ${PROJECT_PATH}/done/merge/$(basename ${mergeout}).done ]; then
 else
 	module purge
 	module load GATK4
-	cmd="srun gatk --java-options -Xmx2g MergeVcfs \
+	cmd="srun gatk --java-options -Xmx8g MergeVcfs \
 		${variant} \
 		-D ${REFD} \
 		-O ${mergeout}"
@@ -38,7 +37,7 @@ else
 fi
 module purge
 module load BCFtools
-# generate the list of IDs 
+# generate the list of IDs
 if [ -f ${PROJECT_PATH}/done/merge/${PROJECT}_ID.list.done ]; then
 	echo "INFO: Output from Merge for ${PROJECT}_ID.list already available"
 else

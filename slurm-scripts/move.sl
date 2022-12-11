@@ -1,11 +1,10 @@
 #!/bin/bash
-# move.sl 
+# move.sl
 # this script is intended to take a collection of non-overlapping contig vcf.gz files, all with the same individuals in them, and stitch them together into one vcf.gz
 #SBATCH --job-name	Move
-#SBATCH --time		1:00:00
+#SBATCH --time		6:00:00
 #SBATCH --mem		1G
 #SBATCH --cpus-per-task	1
-#SBATCH --mail-type FAIL,END
 #SBATCH --error		slurm/move/move-%j.out
 #SBATCH --output	slurm/move/move-%j.out
 
@@ -31,6 +30,7 @@ if [ ! -f ${PROJECT_PATH}/done/move/${PROJECT}_GenderReport.txt.move.done ]; the
 	done
 	if [ $COUNT -le 10 ]
 	then
+		mkdir -p ${PROJECT_PATH}/done/move
 		touch ${PROJECT_PATH}/done/move/${PROJECT}_GenderReport.txt.move.done
 	else
 		(echo "--FAILURE--      Unable to move ${PROJECT_PATH}/${PROJECT}_GenderReport.txt to ${outputdir}" 1>&2)
