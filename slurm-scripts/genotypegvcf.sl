@@ -24,7 +24,7 @@ module load GATK4
 # The amount of temporary disk storage required by GenomicsDBImport may exceed what is available in the default location: `/tmp`.
 # The command line argument `--tmp-dir` can be used to specify an alternate temporary storage location with sufficient space.
 
-if [ -f ${PROJECT_PATH}/done/genotype/${CONTIG}_gen.vcf.gz.done ]; then
+if [ -f ${PROJECT_PATH}/done/genotype/${CONTIG}_raw.vcf.gz.done ]; then
 	echo "INFO: Output ${CONTIG}_raw.vcf.gz already completed."
 else
 	scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=GenotypeGVCF_${PROJECT}_${CONTIG}
@@ -40,14 +40,36 @@ else
 		-G AS_StandardAnnotation \
 		-ped ${PED} \
 		--tmp-dir ${TMPDIR} \
-		-O ${PROJECT_PATH}/genotype/${CONTIG}_gen.vcf.gz"
+		-O ${PROJECT_PATH}/genotype/${CONTIG}_raw.vcf.gz"
 	echo $cmd
 	eval $cmd || exit 1$?
 	mkdir -p ${PROJECT_PATH}/done/genotype
-	touch ${PROJECT_PATH}/done/genotype/${CONTIG}_gen.vcf.gz.done
+	touch ${PROJECT_PATH}/done/genotype/${CONTIG}_raw.vcf.gz.done
 	if [ -d ${PROJECT_PATH}/GenomeDB/GenomeDB_${CONTIG} ]; then
 		rm -r ${PROJECT_PATH}/GenomeDB/GenomeDB_${CONTIG}
 	fi
 fi
+
+
+if [ -f ${PROJECT_PATH}/done/genotype/${CONTIG}_gen.vcf.gz.done ]; then
+	echo "INFO: Output from normalising contig ${CONTIG} already available"
+else
+	scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=Normalise_${PROJECT}_${CONTIG}
+	cmd="$(which bcftools) norm -f ${REFA} ${PROJECT_PATH}/genotype/${CONTIG}_raw.vcf.gz -Oz -o ${PROJECT_PATH}/genotype/${CONTIG}_gen.vcf.gz"
+	echo $cmd
+	eval $cmd || exit 1$?
+	touch ${PROJECT_PATH}/done/genotype/${CONTIG}_gen.vcf.gz.done
+fi
+
+if [ -f ${PROJECT_PATH}/done/genotype/${CONTIG}_gen.vcf.gz.tbi.done ]; then
+	echo "INFO: Index from normalising contig ${CONTIG} already available"
+else
+	scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=IndexNorm_${PROJECT}_${CONTIG}
+	cmd="$(which bcftools) index -t ${PROJECT_PATH}/genotype/${CONTIG}_gen.vcf.gz"
+	echo $cmd
+	eval $cmd || exit 1$?
+	touch ${PROJECT_PATH}/done/genotype/${CONTIG}_gen.vcf.gz.tbi.done
+fi
+
 exit 0
 
