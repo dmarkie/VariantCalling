@@ -25,13 +25,13 @@ else
 	mkdir -p ${PROJECT_PATH}/GenomeDB
 	COUNT=0
 	CMD="srun rsync -avP ${genomicsDB_workpath}/GenomeDB_${CONTIG} ${PROJECT_PATH}/GenomeDB"
-	until [ $COUNT -gt 10 ] || eval ${CMD}
+	until [ $COUNT -gt 50 ] || eval ${CMD}
 	do
 		((COUNT++))
 		sleep 20s
 		(echo "--FAILURE--      Syncing ${genomicsDB_workpath}/GenomeDB_${CONTIG} to ${PROJECT_PATH} failed. Retrying..." 1>&2)
 	done
-	if [ $COUNT -le 10 ]
+	if [ $COUNT -le 50 ]
 	then
 		mkdir -p ${PROJECT_PATH}/done/GenomeDB
 		touch ${PROJECT_PATH}/done/GenomeDB/GenomicsDBImport_${CONTIG}.done
