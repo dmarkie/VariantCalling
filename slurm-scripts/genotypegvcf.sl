@@ -55,6 +55,8 @@ if [ -f ${PROJECT_PATH}/done/genotype/${CONTIG}_gen.vcf.gz.done ]; then
 	echo "INFO: Output from normalising contig ${CONTIG} already available"
 else
 	scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=Normalise_${PROJECT}_${CONTIG}
+	module purge
+	module load BCFtools
 	cmd="$(which bcftools) norm -f ${REFA} ${PROJECT_PATH}/genotype/${CONTIG}_raw.vcf.gz -Oz -o ${PROJECT_PATH}/genotype/${CONTIG}_gen.vcf.gz"
 	echo $cmd
 	eval $cmd || exit 1$?
@@ -65,6 +67,8 @@ if [ -f ${PROJECT_PATH}/done/genotype/${CONTIG}_gen.vcf.gz.tbi.done ]; then
 	echo "INFO: Index from normalising contig ${CONTIG} already available"
 else
 	scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=IndexNorm_${PROJECT}_${CONTIG}
+	module purge
+	module load BCFtools
 	cmd="$(which bcftools) index -t ${PROJECT_PATH}/genotype/${CONTIG}_gen.vcf.gz"
 	echo $cmd
 	eval $cmd || exit 1$?
