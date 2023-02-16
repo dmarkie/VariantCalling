@@ -3,7 +3,7 @@
 
 #SBATCH --job-name	Refine
 #SBATCH --time		48:00:00
-#SBATCH --mem		72G
+#SBATCH --mem		32G
 #SBATCH --cpus-per-task	2
 #SBATCH --error		slurm/refinement/refinement-%A_%a.out
 #SBATCH --output	slurm/refinement/refinement-%A_%a.out

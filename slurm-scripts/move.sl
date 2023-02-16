@@ -2,7 +2,7 @@
 # move.sl
 # this script is intended to take a collection of non-overlapping contig vcf.gz files, all with the same individuals in them, and stitch them together into one vcf.gz
 #SBATCH --job-name	Move
-#SBATCH --time		6:00:00
+#SBATCH --time		10:00:00
 #SBATCH --mem		1G
 #SBATCH --cpus-per-task	1
 #SBATCH --error		slurm/move/move-%j.out
