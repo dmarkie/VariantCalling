@@ -31,7 +31,7 @@ if [ ${sexchromosomes} == "yes" ]; then
 	sexaneusomies=$(awk '$5 ~ /^X0|XXY|XYY|XXX|XXXX|XXXY|XYYY$/ { print $1 }' ${PROJECT_PATH}/${PROJECT}_GenderReport.txt | wc -l)
 	echo -e "There are ${sexaneusomies} samples in the cohort processed as sex chromosome aneusomies."
 fi
-if [[ "${CONTIG}" == +(chrX*|^X*) ]] && [ ${sexchromosomes} == "yes" ]; then
+if [[ "${CONTIG}" == +(chrX*|X*) ]] && [ ${sexchromosomes} == "yes" ]; then
 	if [ ${sexaneusomies} -gt 0 ]; then
 	# this option is for treating the X chromosome as a single unit during genotype refinement even when it has been processed appropriately for males and females
 # it does not do genotype posteriors or de novo calling as this only works with diploid data, but does do the genotype quality filtering
@@ -181,7 +181,7 @@ if [[ "${CONTIG}" == +(chrX*|^X*) ]] && [ ${sexchromosomes} == "yes" ]; then
 			touch ${PROJECT_PATH}/done/refinement/${CONTIG}_refine.vcf.gz.done
 		fi
 	fi
-elif [[ "${CONTIG}" == +(chrY.*|Y*) ]] && [ ${sexchromosomes} == "yes" ]; then
+elif [[ "${CONTIG}" == +(chrY*|Y*) ]] && [ ${sexchromosomes} == "yes" ]; then
 #	module purge
 #	module load GATK4
 	if [ -f ${PROJECT_PATH}/done/refinement/${CONTIG}_refine.vcf.gz.done ]; then
