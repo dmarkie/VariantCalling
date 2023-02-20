@@ -78,7 +78,7 @@ if [[ "${CONTIG}" == +(chrX*|X*) ]] && [ ${sexchromosomes} == "yes" ]; then
 			echo "INFO: Posteriors for XPAR ${CONTIG} already complete."
 		else
 			scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=Posteriors_${PROJECT}_${CONTIG}
-			cmd="srun gatk --java-options -Xmx68g \
+			cmd="srun gatk --java-options -Xmx24g \
 				CalculateGenotypePosteriors \
 				-R ${REFA} \
 				-V ${PROJECT_PATH}/refinement/${CONTIG}_XPAR.vcf.gz \
@@ -207,7 +207,7 @@ else
 		echo "INFO: Posteriors for ${CONTIG} already complete."
 	else
 		scontrol update jobid=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} jobname=Posteriors_${PROJECT}_${CONTIG}
-		cmd="srun gatk --java-options -Xmx68g \
+		cmd="srun gatk --java-options -Xmx24g \
 			CalculateGenotypePosteriors \
 			-R ${REFA} \
 			-V ${PROJECT_PATH}/applyrecal/${CONTIG}_recal.vcf.gz \
