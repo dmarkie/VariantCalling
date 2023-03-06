@@ -2,9 +2,9 @@
 #GenomeDBimport.sl - for joint genotyping gvcf files for contigs
 
 #SBATCH --job-name	GenomeDB
-#SBATCH --time		10-00:00:00
-#SBATCH --cpus-per-task	2
-#SBATCH --mem		16G
+#SBATCH --time		6:00:00
+#SBATCH --cpus-per-task	1
+#SBATCH --mem		5G
 #SBATCH --error		slurm/GenomeDB/import-%A_%a.out
 #SBATCH --output	slurm/GenomeDB/import-%A_%a.out
 

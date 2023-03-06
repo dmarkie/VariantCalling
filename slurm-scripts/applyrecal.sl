@@ -2,9 +2,9 @@
 #applyrecal.sl
 
 #SBATCH --job-name	ApplyRecal
-#SBATCH --time		12:00:00
-#SBATCH --mem		24G
-#SBATCH --cpus-per-task	2
+#SBATCH --time		4:00:00
+#SBATCH --mem		5G
+#SBATCH --cpus-per-task	1
 #SBATCH --error		slurm/applyrecal/applyrecal-%A_%a.out
 #SBATCH --output	slurm/applyrecal/applyrecal-%A_%a.out
 

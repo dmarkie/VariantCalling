@@ -2,9 +2,9 @@
 #genotypegvcf.sl - for joint genotyping gvcf files for contigs
 
 #SBATCH --job-name	GenotypeGVCFs
-#SBATCH --time		10-00:00:00
-#SBATCH --cpus-per-task	2
-#SBATCH --mem		10G
+#SBATCH --time		4:00:00
+#SBATCH --cpus-per-task	1
+#SBATCH --mem		5G
 #SBATCH --error		slurm/genotype/ggvcf-%A_%a.out
 #SBATCH --output	slurm/genotype/ggvcf-%A_%a.out
 

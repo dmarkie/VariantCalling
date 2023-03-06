@@ -1,7 +1,7 @@
 #!/bin/bash
 #recalvcf.sl - for variant recalibration
 #SBATCH --job-name	RecalibrateVCFs
-#SBATCH --time		18:00:00
+#SBATCH --time		4:00:00
 #SBATCH --mem		20G
 #SBATCH --array		1-2
 #SBATCH --cpus-per-task	2

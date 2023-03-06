@@ -2,9 +2,9 @@
 #splitmultiallelic.sl
 
 #SBATCH --job-name	SplitMulti
-#SBATCH --time		8:00:00
+#SBATCH --time		1:00:00
 #SBATCH --mem		1G
-#SBATCH --cpus-per-task	2
+#SBATCH --cpus-per-task	1
 #SBATCH --error		slurm/split/split-%A_%a.out
 #SBATCH --output	slurm/split/split-%A_%a.out
 

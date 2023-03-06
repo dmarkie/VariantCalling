@@ -2,7 +2,7 @@
 # mergesplit.sl
 # this script is intended to take a collection of non-overlapping contig vcf.gz files, all with the same individuals in them, and stitch them together into one vcf.gz
 #SBATCH --job-name	Merge
-#SBATCH --time		12:00:00
+#SBATCH --time		2:00:00
 #SBATCH --mem		12G
 #SBATCH --cpus-per-task	2
 #SBATCH --error		slurm/mergesplit/mergesplit-%j.out
